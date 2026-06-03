@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 import tempfile
 import uuid
 from pathlib import Path
@@ -8,6 +9,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+import fitz
+from PIL import Image, UnidentifiedImageError
 
 from server.pdf_service import (
     Replacement,
@@ -22,6 +25,8 @@ STATIC_DIR = BASE_DIR / "static"
 STORAGE_DIR = Path(tempfile.gettempdir()) / "pdf-text-replacement-system"
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 DOWNLOADS_DIR = Path.home() / "Downloads"
+SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}
+MAX_IMAGE_PDF_WIDTH = 612
 
 app = FastAPI(title="PDF Text Replacement System")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -56,10 +61,13 @@ def index():
 @app.post("/api/extract")
 async def extract(file: UploadFile = File(...)) -> dict:
     filename = file.filename or "uploaded.pdf"
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="请上传 PDF 文件。")
 
-    pdf_bytes = await file.read()
+    uploaded_bytes = await file.read()
+    try:
+        pdf_bytes, stored_filename = _uploaded_file_to_pdf(filename, uploaded_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     document_id = uuid.uuid4().hex
     pdf_path = _document_path(document_id)
 
@@ -69,7 +77,7 @@ async def extract(file: UploadFile = File(...)) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     pdf_path.write_bytes(pdf_bytes)
-    return {"document_id": document_id, "filename": filename, **extracted}
+    return {"document_id": document_id, "filename": stored_filename, **extracted}
 
 
 @app.get("/api/document/{document_id}")
@@ -144,3 +152,43 @@ def _document_path(document_id: str) -> Path:
     if not document_id or any(char not in "0123456789abcdef" for char in document_id):
         raise HTTPException(status_code=400, detail="PDF 编号无效。")
     return STORAGE_DIR / f"{document_id}.pdf"
+
+
+def _uploaded_file_to_pdf(filename: str, uploaded_bytes: bytes) -> tuple[bytes, str]:
+    source = Path(filename)
+    extension = source.suffix.lower()
+
+    if extension == ".pdf":
+        return uploaded_bytes, filename
+
+    if extension not in SUPPORTED_IMAGE_EXTENSIONS:
+        raise ValueError("请上传 PDF 或图片文件。支持 PDF、PNG、JPG、WEBP、TIFF。")
+
+    try:
+        image = Image.open(BytesIO(uploaded_bytes))
+        image.load()
+    except UnidentifiedImageError as exc:
+        raise ValueError("图片文件无效，无法读取。") from exc
+
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    elif image.mode == "L":
+        image = image.convert("RGB")
+
+    stream = BytesIO()
+    image.save(stream, format="PNG")
+
+    width, height = _image_pdf_size(image.width, image.height)
+    doc = fitz.open()
+    page = doc.new_page(width=width, height=height)
+    page.insert_image(page.rect, stream=stream.getvalue())
+    stored_filename = f"{source.stem or 'image'}.pdf"
+    return doc.tobytes(garbage=4, deflate=True), stored_filename
+
+
+def _image_pdf_size(width: int, height: int) -> tuple[float, float]:
+    if width <= 0 or height <= 0:
+        raise ValueError("图片尺寸无效。")
+
+    scale = min(1.0, MAX_IMAGE_PDF_WIDTH / width)
+    return round(width * scale, 3), round(height * scale, 3)

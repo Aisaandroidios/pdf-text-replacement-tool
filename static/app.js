@@ -26,13 +26,13 @@ uploadForm.addEventListener("submit", async (event) => {
 
   const file = fileInput.files[0];
   if (!file) {
-    setStatus("请选择一个 PDF 文件", "warn");
+    setStatus("请选择一个 PDF 或图片文件", "warn");
     return;
   }
 
   const formData = new FormData();
   formData.append("file", file);
-    setBusy(true, "正在读取 PDF 文字和图片文字");
+  setBusy(true, "正在读取文件文字和图片文字");
 
   try {
     const response = await fetch("/api/extract", {

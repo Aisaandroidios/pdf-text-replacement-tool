@@ -11,12 +11,17 @@
       <header class="topbar">
         <div>
           <h1>PDF 信息替换工具</h1>
-          <p id="statusText">等待上传 PDF</p>
+          <p id="statusText">等待上传 PDF 或图片</p>
         </div>
         <form id="uploadForm" class="upload-form">
           <label class="file-picker">
-            <input id="pdfFile" type="file" name="file" accept="application/pdf,.pdf" />
-            <span>选择 PDF</span>
+            <input
+              id="pdfFile"
+              type="file"
+              name="file"
+              accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,image/tiff,.png,.jpg,.jpeg,.webp,.tif,.tiff"
+            />
+            <span>选择 PDF / 图片</span>
           </label>
           <button type="submit">读取文字</button>
         </form>
