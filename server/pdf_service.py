@@ -7,6 +7,8 @@ from typing import Any
 
 import fitz
 
+from server.ocr_service import extract_ocr_text
+
 
 MIN_FONT_SIZE = 6.0
 DEFAULT_FONT_SIZE = 12.0
@@ -25,7 +27,7 @@ class Replacement:
     origin: list[float] | None = None
 
 
-def extract_pdf_text(pdf_bytes: bytes) -> dict[str, Any]:
+def extract_pdf_text(pdf_bytes: bytes, include_ocr: bool = True) -> dict[str, Any]:
     doc = _open_pdf(pdf_bytes)
     pages: list[dict[str, Any]] = []
 
@@ -52,6 +54,7 @@ def extract_pdf_text(pdf_bytes: bytes) -> dict[str, Any]:
                             "font_size": round(float(span.get("size", DEFAULT_FONT_SIZE)), 3),
                             "font": span.get("font", ""),
                             "color": _int_to_rgb(span.get("color", 0)),
+                            "source": "pdf",
                         }
                     )
 
@@ -65,10 +68,26 @@ def extract_pdf_text(pdf_bytes: bytes) -> dict[str, Any]:
             }
         )
 
+    ocr_message = ""
+    ocr_available = False
+    if include_ocr:
+        ocr_result = extract_ocr_text(doc, pages)
+        pages = ocr_result.pages
+        ocr_available = ocr_result.available
+        ocr_message = ocr_result.message
+
+    any_items = any(page["items"] for page in pages)
+    message = ""
+    if not any_items:
+        message = ocr_message or "没有找到可复制文字；这个 PDF 可能是扫描件。"
+    elif ocr_message:
+        message = ocr_message
+
     return {
         "page_count": len(doc),
         "pages": pages,
-        "message": "" if any(page["items"] for page in pages) else "没有找到可复制文字；这个 PDF 可能是扫描件。",
+        "message": message,
+        "ocr_available": ocr_available,
     }
 
 

@@ -10,10 +10,15 @@ USER_ID="$(id -u)"
 
 cd "${ROOT}"
 
-if [ ! -x "${ROOT}/.venv/bin/uvicorn" ]; then
+if [ ! -d "${ROOT}/.venv" ]; then
   python3 -m venv .venv
-  . "${ROOT}/.venv/bin/activate"
-  pip install -r requirements.txt
+fi
+
+. "${ROOT}/.venv/bin/activate"
+pip install -r requirements.txt
+
+if ! command -v tesseract >/dev/null 2>&1; then
+  echo "提示：未检测到 tesseract，普通 PDF 可用，图片文字 OCR 不可用。可运行：brew install tesseract tesseract-lang"
 fi
 
 mkdir -p "${HOME}/Library/LaunchAgents"

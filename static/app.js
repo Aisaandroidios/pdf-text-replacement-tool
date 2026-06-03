@@ -32,7 +32,7 @@ uploadForm.addEventListener("submit", async (event) => {
 
   const formData = new FormData();
   formData.append("file", file);
-  setBusy(true, "正在读取 PDF 文字");
+    setBusy(true, "正在读取 PDF 文字和图片文字");
 
   try {
     const response = await fetch("/api/extract", {
@@ -56,7 +56,8 @@ uploadForm.addEventListener("submit", async (event) => {
     renderReplacements();
 
     const count = state.pages.reduce((sum, page) => sum + page.items.length, 0);
-    setStatus(payload.message || `已读取 ${payload.page_count} 页，${count} 条文字`);
+    const baseMessage = `已读取 ${payload.page_count} 页，${count} 条文字`;
+    setStatus(payload.message ? `${baseMessage}；${payload.message}` : baseMessage);
   } catch (error) {
     setStatus(error.message, "warn");
   } finally {
@@ -160,6 +161,7 @@ function renderTextList() {
       button.type = "button";
       button.className = `text-item${state.selectedItem?.id === item.id ? " active" : ""}`;
       button.dataset.replaced = state.replacements.has(item.id) ? "true" : "false";
+      button.dataset.source = item.source || "pdf";
       button.textContent = item.text;
       button.addEventListener("click", () => selectItem(item));
       group.append(button);
