@@ -1,43 +1,43 @@
-# PDF 信息替换工具
+# PDF Text Replacement Tool
 
-本项目是一个本地网页系统，用来读取普通电子 PDF 里的可复制文字，也能通过 OCR 识别图片/扫描件里的文字。它支持上传 PDF、PNG、JPG、WEBP、TIFF，选择某条信息后替换成新信息，并导出修改后的 PDF。它只在本机运行，不会把文件上传到外部服务。
+This project is a local web app for reading text from digital PDFs and OCR text from images or scanned documents. It supports PDF, PNG, JPG, WEBP, and TIFF uploads, lets you select text, replace it with new content, and export the edited result. Files stay on your own machine and are not uploaded to any external service.
 
-## 环境要求
+## Requirements
 
 - macOS
-- Python 3.10 或更新版本
+- Python 3.10 or later
 - Git
-- 如需识别图片/扫描件里的文字：Tesseract OCR
+- Tesseract OCR, required for image/scanned-document text recognition
 
-## 启动
+## Start
 
-如需图片文字 OCR，先安装 OCR 引擎：
+Install the OCR engine if you need image text recognition:
 
 ```bash
 brew install tesseract tesseract-lang
 ```
 
-`tesseract-lang` 用于安装多语言 OCR 识别包。
+`tesseract-lang` installs multilingual OCR language packs.
 
-推荐使用本机后台服务方式：
+Recommended local background service:
 
 ```bash
 ./scripts/start-server.sh
 ```
 
-打开：
+Open:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-关闭：
+Stop:
 
 ```bash
 ./scripts/stop-server.sh
 ```
 
-也可以手动前台启动：
+You can also run it manually in the foreground:
 
 ```bash
 python3 -m venv .venv
@@ -46,53 +46,53 @@ pip install -r requirements.txt
 uvicorn server.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-打开：
+Open:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-## 使用
+## Usage
 
-1. 点击 `选择 PDF / 图片` 上传 PDF 或图片。
-2. 点击 `读取文字`。
-3. 在左侧搜索或选择要替换的文字。
-4. 在中间输入新信息，点击 `加入替换`。
-5. 如果同样文字在 PDF 里出现多次，点击 `替换所有相同文字` 可以一次性加入所有相同项。
-6. 在 `导出格式` 里选择输出类型。图片上传默认推荐保持原图格式，也可以改成 PDF。
-7. 点击 `导出图片` 或 `导出 PDF`。
-8. 导出的文件会直接保存到 macOS 下载目录，并在页面顶部和替换列表旁显示完整保存位置。
+1. Click `选择 PDF / 图片` (Choose PDF / Image) to upload a PDF or image.
+2. Click `读取文字` (Read Text).
+3. Search or select the text you want to replace from the left panel.
+4. Enter the new content in the middle panel and click `加入替换` (Add Replacement).
+5. If the same text appears multiple times, click `替换所有相同文字` (Replace All Matching Text) to add every exact match.
+6. Choose an output type in `导出格式` (Export Format). Image uploads default to their original image format, but you can also export them as PDF.
+7. Click `导出图片` (Export Image) or `导出 PDF` (Export PDF).
+8. The exported file is saved directly to the macOS Downloads folder, and the full saved path is shown in the page.
 
-## 支持范围
+## Supported Scope
 
-- 支持普通电子 PDF。
-- 支持 PNG、JPG、WEBP、TIFF 图片上传，图片会先转换为单页 PDF 用于预览和 OCR，同时保留原图片用于导出。
-- 图片上传默认导出为原图片格式；如果需要发给别人看，也可以在页面选择导出为 PDF。
-- 支持图片/扫描件 PDF 的 OCR 文字识别，需要安装 Tesseract。
-- 支持多语言 OCR。系统会自动启用 Tesseract 当前安装的全部文字语言包；需要识别某种语言时，先安装对应的 Tesseract 语言包，再用 `tesseract --list-langs` 查看本机实际可识别语言。
-- 替换方式是在原文字区域做白色覆盖，再写入新文字。
-- 替换文字会继承原文字的字号、颜色和可用字体名。
-- 图片文字来自 OCR，系统会按原图文字区域估算背景色、文字颜色和字号后写回原图，尽量保持原图视觉效果。
-- 为了保持样式不变，新文字过长时不会自动缩小字号，可能会超出原文字区域。
+- Supports ordinary digital PDFs.
+- Supports PNG, JPG, WEBP, and TIFF image uploads. Images are converted to single-page PDFs for preview and OCR, while the original image is kept for image-format export.
+- Image uploads default to exporting back to the original image format. You can also choose PDF export from the page.
+- Supports OCR for images and scanned PDFs when Tesseract is installed.
+- Supports multilingual OCR. The app automatically enables all text language packs currently installed in Tesseract. Install the language packs you need, then run `tesseract --list-langs` to see which languages are available on your machine.
+- PDF text replacement covers the original text area and writes the new text back into the same region.
+- Replacement text inherits the original font size, color, and usable font name when that information is available.
+- OCR text in images is replaced by estimating the original image background color, text color, and font size, then writing the new text back into the image to preserve the visual appearance as closely as possible.
+- To preserve styling, the app does not automatically shrink overly long replacement text, so very long new text may overflow the original text area.
 
-## 技术栈
+## Tech Stack
 
-- Python + FastAPI：本地后端接口，处理上传、读取、替换和导出。
-- PyMuPDF / fitz：读取 PDF 文字、定位文字坐标、生成和修改 PDF。
-- Pillow：处理图片上传，在图片上覆盖旧文字并写入新文字。
-- Tesseract OCR + pytesseract：识别图片和扫描件里的文字。
-- HTML / CSS / JavaScript：前端页面、文件上传、文字选择、替换列表和导出格式选择。
-- pytest：自动测试 PDF、图片、OCR 和导出流程。
-- launchd + shell scripts：macOS 后台启动和关闭服务。
-- Git + GitHub：版本管理和开源发布。
+- Python + FastAPI: local backend API for upload, extraction, replacement, and export.
+- PyMuPDF / fitz: PDF text extraction, text coordinates, PDF generation, and PDF modification.
+- Pillow: image upload handling, image text covering, and image text drawing.
+- Tesseract OCR + pytesseract: OCR for images and scanned documents.
+- HTML / CSS / JavaScript: frontend UI, file upload, text selection, replacement queue, and export format selection.
+- pytest: automated tests for PDF, image, OCR, and export flows.
+- launchd + shell scripts: macOS background service start/stop.
+- Git + GitHub: version control and open-source publishing.
 
-## 验证
+## Verification
 
 ```bash
 . .venv/bin/activate
 python -m pytest -q
 ```
 
-## 开源协议
+## License
 
-本项目使用 MIT License。
+MIT License.
