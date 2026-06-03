@@ -1,5 +1,7 @@
 # PDF Text Replacement Tool
 
+[中文说明](README.zh-CN.md)
+
 This project is a local web app for reading text from digital PDFs and OCR text from images or scanned documents. It supports PDF, PNG, JPG, WEBP, and TIFF uploads, lets you select text, replace it with new content, and export the edited result. Files stay on your own machine and are not uploaded to any external service.
 
 ## Requirements
