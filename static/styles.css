@@ -160,6 +160,7 @@ label {
 }
 
 input[type="search"],
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -174,6 +175,12 @@ input[type="search"] {
   padding: 0 12px;
 }
 
+select {
+  min-width: 150px;
+  height: 40px;
+  padding: 0 10px;
+}
+
 textarea {
   min-height: 110px;
   resize: vertical;
@@ -181,6 +188,7 @@ textarea {
 }
 
 input[type="search"]:focus,
+select:focus,
 textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
@@ -311,9 +319,26 @@ textarea:focus {
 
 .queue-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.export-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.export-controls label {
+  flex-basis: 100%;
+}
+
+.export-controls button {
+  white-space: nowrap;
 }
 
 .saved-path {

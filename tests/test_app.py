@@ -16,15 +16,19 @@ def make_pdf_with_text(text: str) -> bytes:
     return doc.tobytes()
 
 
-def make_png_with_text(text: str) -> bytes:
+def make_png_with_text(
+    text: str,
+    fill: tuple[int, int, int] = (0, 0, 0),
+    background: tuple[int, int, int] = (255, 255, 255),
+) -> bytes:
     pillow = pytest.importorskip("PIL.Image")
     image_draw = pytest.importorskip("PIL.ImageDraw")
     image_font = pytest.importorskip("PIL.ImageFont")
 
-    image = pillow.new("RGB", (900, 260), "white")
+    image = pillow.new("RGB", (900, 260), background)
     draw = image_draw.Draw(image)
     font = image_font.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 72)
-    draw.text((70, 80), text, fill="black", font=font)
+    draw.text((70, 80), text, fill=fill, font=font)
 
     output = BytesIO()
     image.save(output, format="PNG")
@@ -41,6 +45,8 @@ def test_index_serves_tool_ui():
     assert "替换所有相同文字" in response.text
     assert "image/png" in response.text
     assert "选择 PDF / 图片" in response.text
+    assert 'id="exportFormat"' in response.text
+    assert "导出格式" in response.text
 
 
 def test_extract_endpoint_returns_document_id_and_text():
@@ -69,7 +75,14 @@ def test_extract_endpoint_accepts_image_upload_and_stores_as_pdf():
     assert response.status_code == 200
     payload = response.json()
     assert payload["document_id"]
-    assert payload["filename"] == "sample.pdf"
+    assert payload["filename"] == "sample.png"
+    assert payload["preview_filename"] == "sample.pdf"
+    assert payload["source_type"] == "image"
+    assert payload["recommended_export_format"] == "source"
+    assert payload["export_options"] == [
+        {"value": "source", "label": "保持原图格式 PNG"},
+        {"value": "pdf", "label": "导出 PDF"},
+    ]
     document_response = client.get(f"/api/document/{payload['document_id']}")
     assert document_response.status_code == 200
     assert document_response.headers["content-type"] == "application/pdf"
@@ -165,3 +178,162 @@ def test_export_save_endpoint_writes_modified_pdf_to_downloads(tmp_path, monkeyp
     output_text = "\n".join(page.get_text() for page in fitz.open(saved_path))
     assert "Invoice: 2002" in output_text
     assert "Invoice: 1001" not in output_text
+
+
+def test_export_save_endpoint_keeps_image_upload_as_image_by_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "DOWNLOADS_DIR", tmp_path)
+    client = TestClient(app)
+    extract_response = client.post(
+        "/api/extract",
+        files={"file": ("sample.png", make_png_with_text("IMAGE CODE 123"), "image/png")},
+    )
+    extracted = extract_response.json()
+    target = next(
+        item
+        for page in extracted["pages"]
+        for item in page["items"]
+        if "IMAGE CODE 123" in item["text"]
+    )
+
+    export_response = client.post(
+        "/api/export-save",
+        json={
+            "document_id": extracted["document_id"],
+            "filename": extracted["filename"],
+            "replacements": [
+                {
+                    "page_index": target["page_index"],
+                    "item_id": target["id"],
+                    "bbox": target["bbox"],
+                    "old_text": target["text"],
+                    "new_text": "IMAGE DONE 999",
+                    "font_size": target["font_size"],
+                    "font": target["font"],
+                    "color": target["color"],
+                    "origin": target["origin"],
+                }
+            ],
+        },
+    )
+
+    assert export_response.status_code == 200
+    payload = export_response.json()
+    saved_path = tmp_path / payload["filename"]
+    assert saved_path.suffix == ".png"
+    assert payload["output_format"] == "source"
+    assert payload["media_type"] == "image/png"
+    assert payload["saved_path"] == str(saved_path)
+    assert saved_path.exists()
+    assert saved_path.read_bytes().startswith(b"\x89PNG")
+
+
+def test_export_save_endpoint_can_export_image_upload_as_pdf(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_module, "DOWNLOADS_DIR", tmp_path)
+    client = TestClient(app)
+    extract_response = client.post(
+        "/api/extract",
+        files={"file": ("sample.png", make_png_with_text("IMAGE CODE 123"), "image/png")},
+    )
+    extracted = extract_response.json()
+    target = next(
+        item
+        for page in extracted["pages"]
+        for item in page["items"]
+        if "IMAGE CODE 123" in item["text"]
+    )
+
+    export_response = client.post(
+        "/api/export-save",
+        json={
+            "document_id": extracted["document_id"],
+            "filename": extracted["filename"],
+            "output_format": "pdf",
+            "replacements": [
+                {
+                    "page_index": target["page_index"],
+                    "item_id": target["id"],
+                    "bbox": target["bbox"],
+                    "old_text": target["text"],
+                    "new_text": "IMAGE DONE 999",
+                    "font_size": target["font_size"],
+                    "font": target["font"],
+                    "color": target["color"],
+                    "origin": target["origin"],
+                }
+            ],
+        },
+    )
+
+    assert export_response.status_code == 200
+    payload = export_response.json()
+    saved_path = tmp_path / payload["filename"]
+    assert saved_path.suffix == ".pdf"
+    assert payload["output_format"] == "pdf"
+    assert payload["media_type"] == "application/pdf"
+    assert saved_path.exists()
+    assert saved_path.read_bytes().startswith(b"%PDF")
+
+
+def test_export_save_endpoint_preserves_image_size_and_detected_text_color(
+    tmp_path, monkeypatch
+):
+    if not tesseract_available():
+        pytest.skip("Tesseract OCR is not installed")
+
+    image_module = pytest.importorskip("PIL.Image")
+    monkeypatch.setattr(app_module, "DOWNLOADS_DIR", tmp_path)
+    client = TestClient(app)
+    extract_response = client.post(
+        "/api/extract",
+        files={
+            "file": (
+                "style-sample.png",
+                make_png_with_text(
+                    "STYLE CODE 123",
+                    fill=(14, 72, 164),
+                    background=(244, 246, 238),
+                ),
+                "image/png",
+            )
+        },
+    )
+    extracted = extract_response.json()
+    target = next(
+        item
+        for page in extracted["pages"]
+        for item in page["items"]
+        if "STYLE CODE 123" in item["text"]
+    )
+
+    export_response = client.post(
+        "/api/export-save",
+        json={
+            "document_id": extracted["document_id"],
+            "filename": extracted["filename"],
+            "replacements": [
+                {
+                    "page_index": target["page_index"],
+                    "item_id": target["id"],
+                    "bbox": target["bbox"],
+                    "old_text": target["text"],
+                    "new_text": "STYLE CODE 999",
+                    "font_size": target["font_size"],
+                    "font": target["font"],
+                    "color": target["color"],
+                    "origin": target["origin"],
+                }
+            ],
+        },
+    )
+
+    assert export_response.status_code == 200
+    saved_path = tmp_path / export_response.json()["filename"]
+    assert saved_path.suffix == ".png"
+
+    edited = image_module.open(saved_path).convert("RGB")
+    assert edited.size == (900, 260)
+    pixels = list(edited.getdata())
+    blueish_pixels = [
+        pixel for pixel in pixels if pixel[0] < 80 and 45 <= pixel[1] <= 120 and pixel[2] > 120
+    ]
+    assert len(blueish_pixels) > 100

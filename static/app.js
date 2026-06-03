@@ -1,6 +1,9 @@
 const state = {
   documentId: "",
   filename: "",
+  sourceType: "pdf",
+  exportOptions: [{ value: "pdf", label: "导出 PDF" }],
+  exportFormat: "pdf",
   pages: [],
   selectedItem: null,
   replacements: new Map(),
@@ -18,6 +21,7 @@ const saveReplacement = document.querySelector("#saveReplacement");
 const replaceAllSame = document.querySelector("#replaceAllSame");
 const replacementList = document.querySelector("#replacementList");
 const exportPdf = document.querySelector("#exportPdf");
+const exportFormat = document.querySelector("#exportFormat");
 const pdfPreview = document.querySelector("#pdfPreview");
 const lastSavedPath = document.querySelector("#lastSavedPath");
 
@@ -43,6 +47,9 @@ uploadForm.addEventListener("submit", async (event) => {
 
     state.documentId = payload.document_id;
     state.filename = payload.filename || file.name;
+    state.sourceType = payload.source_type || "pdf";
+    state.exportOptions = payload.export_options || [{ value: "pdf", label: "导出 PDF" }];
+    state.exportFormat = payload.recommended_export_format || state.exportOptions[0]?.value || "pdf";
     state.pages = payload.pages || [];
     state.selectedItem = null;
     state.replacements.clear();
@@ -53,6 +60,7 @@ uploadForm.addEventListener("submit", async (event) => {
 
     renderTextList();
     renderSelection();
+    renderExportOptions();
     renderReplacements();
 
     const count = state.pages.reduce((sum, page) => sum + page.items.length, 0);
@@ -66,6 +74,10 @@ uploadForm.addEventListener("submit", async (event) => {
 });
 
 searchInput.addEventListener("input", renderTextList);
+exportFormat.addEventListener("change", () => {
+  state.exportFormat = exportFormat.value;
+  updateExportButton();
+});
 
 saveReplacement.addEventListener("click", () => {
   if (!state.selectedItem) return;
@@ -115,6 +127,7 @@ exportPdf.addEventListener("click", async () => {
       body: JSON.stringify({
         document_id: state.documentId,
         filename: state.filename,
+        output_format: state.exportFormat,
         replacements: [...state.replacements.values()],
       }),
     });
@@ -196,7 +209,7 @@ function renderSelection() {
 }
 
 function renderReplacements() {
-  exportPdf.disabled = state.replacements.size === 0;
+  updateExportButton();
 
   if (state.replacements.size === 0) {
     replacementList.className = "replacement-list empty-state";
@@ -233,6 +246,25 @@ function renderReplacements() {
   }
 }
 
+function renderExportOptions() {
+  exportFormat.innerHTML = "";
+  for (const option of state.exportOptions) {
+    const item = document.createElement("option");
+    item.value = option.value;
+    item.textContent = option.label;
+    exportFormat.append(item);
+  }
+  exportFormat.value = state.exportFormat;
+  updateExportButton();
+}
+
+function updateExportButton() {
+  const isImageExport = state.sourceType === "image" && exportFormat.value === "source";
+  exportPdf.textContent = isImageExport ? "导出图片" : "导出 PDF";
+  exportPdf.disabled = state.replacements.size === 0;
+  exportFormat.disabled = state.exportOptions.length <= 1 || !state.documentId;
+}
+
 function addReplacement(item, value) {
   state.replacements.set(item.id, {
     page_index: item.page_index,
@@ -265,6 +297,7 @@ function setBusy(isBusy, message = "") {
   saveReplacement.disabled = isBusy || !state.selectedItem;
   replaceAllSame.disabled = isBusy || !state.selectedItem;
   exportPdf.disabled = isBusy || state.replacements.size === 0;
+  exportFormat.disabled = isBusy || state.exportOptions.length <= 1 || !state.documentId;
   if (message) setStatus(message);
 }
 
