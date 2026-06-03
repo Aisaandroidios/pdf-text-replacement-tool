@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDF 信息替换工具</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>PDF 信息替换工具</h1>
+          <p id="statusText">等待上传 PDF</p>
+        </div>
+        <form id="uploadForm" class="upload-form">
+          <label class="file-picker">
+            <input id="pdfFile" type="file" name="file" accept="application/pdf,.pdf" />
+            <span>选择 PDF</span>
+          </label>
+          <button type="submit">读取文字</button>
+        </form>
+      </header>
+
+      <section class="workspace">
+        <aside class="text-panel" aria-label="PDF 文字">
+          <div class="panel-header">
+            <label for="searchInput">搜索</label>
+            <input id="searchInput" type="search" placeholder="输入要找的信息" autocomplete="off" />
+          </div>
+          <div id="textList" class="text-list empty-state">暂无文字</div>
+        </aside>
+
+        <section class="edit-panel" aria-label="替换">
+          <div class="selected-box">
+            <div class="field">
+              <label>已选文字</label>
+              <div id="selectedText" class="selected-text">未选择</div>
+              <div id="sameTextCount" class="same-text-count">选择文字后显示相同项数量</div>
+            </div>
+            <div class="field">
+              <label for="newText">替换成</label>
+              <textarea id="newText" rows="4" placeholder="输入新信息"></textarea>
+            </div>
+            <div class="replacement-actions">
+              <button id="saveReplacement" type="button" disabled>加入替换</button>
+              <button id="replaceAllSame" class="secondary-action" type="button" disabled>
+                替换所有相同文字
+              </button>
+            </div>
+          </div>
+
+          <div class="queue-box">
+            <div class="queue-header">
+              <h2>替换列表</h2>
+              <button id="exportPdf" type="button" disabled>导出 PDF</button>
+            </div>
+            <div id="lastSavedPath" class="saved-path" hidden></div>
+            <div id="replacementList" class="replacement-list empty-state">暂无替换</div>
+          </div>
+        </section>
+
+        <section class="preview-panel" aria-label="PDF 预览">
+          <iframe id="pdfPreview" title="PDF 预览"></iframe>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

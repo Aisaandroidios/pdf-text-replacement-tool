@@ -1,0 +1,18 @@
+.DS_Store
+.server.pid
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Local PDFs and generated artifacts can contain private data.
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# Local logs
+*.log
+
+# Internal planning notes from local Codex sessions
+docs/superpowers/
