@@ -12,6 +12,18 @@ import fitz
 
 OCR_DPI = 220
 MIN_CONFIDENCE = 35
+OCR_LANGUAGE_CODES = (
+    "eng",
+    "chi_sim",
+    "chi_tra",
+    "fra",
+    "deu",
+    "jpn",
+    "kor",
+    "rus",
+    "hin",
+    "uig",
+)
 
 
 @dataclass(frozen=True)
@@ -94,7 +106,7 @@ def _ocr_language(pytesseract: Any) -> str:
     except Exception:
         return "eng"
 
-    selected = [language for language in ("eng", "chi_sim", "chi_tra") if language in languages]
+    selected = [language for language in OCR_LANGUAGE_CODES if language in languages]
     return "+".join(selected) if selected else "eng"
 
 

@@ -3,7 +3,7 @@ from io import BytesIO
 import fitz
 import pytest
 
-from server.ocr_service import ocr_data_to_items, overlaps_existing_text
+from server.ocr_service import _ocr_language, ocr_data_to_items, overlaps_existing_text
 from server.ocr_service import tesseract_available
 from server.pdf_service import extract_pdf_text
 
@@ -78,6 +78,29 @@ def test_overlaps_existing_text_filters_ocr_duplicates():
 
     assert overlaps_existing_text(ocr_item, selectable_items)
     assert not overlaps_existing_text({"bbox": [100.0, 70.0, 130.0, 90.0]}, selectable_items)
+
+
+def test_ocr_language_selects_supported_multilingual_packs():
+    class FakePytesseract:
+        @staticmethod
+        def get_languages(config: str = "") -> list[str]:
+            return [
+                "eng",
+                "chi_sim",
+                "chi_tra",
+                "fra",
+                "deu",
+                "jpn",
+                "kor",
+                "rus",
+                "hin",
+                "uig",
+                "osd",
+            ]
+
+    assert _ocr_language(FakePytesseract) == (
+        "eng+chi_sim+chi_tra+fra+deu+jpn+kor+rus+hin+uig"
+    )
 
 
 def test_extract_pdf_text_reads_text_inside_images_when_ocr_is_available():
