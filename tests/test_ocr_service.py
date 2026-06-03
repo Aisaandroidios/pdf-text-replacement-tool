@@ -80,7 +80,7 @@ def test_overlaps_existing_text_filters_ocr_duplicates():
     assert not overlaps_existing_text({"bbox": [100.0, 70.0, 130.0, 90.0]}, selectable_items)
 
 
-def test_ocr_language_selects_supported_multilingual_packs():
+def test_ocr_language_selects_all_installed_text_language_packs():
     class FakePytesseract:
         @staticmethod
         def get_languages(config: str = "") -> list[str]:
@@ -95,11 +95,13 @@ def test_ocr_language_selects_supported_multilingual_packs():
                 "rus",
                 "hin",
                 "uig",
+                "ara",
+                "spa",
                 "osd",
             ]
 
     assert _ocr_language(FakePytesseract) == (
-        "eng+chi_sim+chi_tra+fra+deu+jpn+kor+rus+hin+uig"
+        "ara+chi_sim+chi_tra+deu+eng+fra+hin+jpn+kor+rus+spa+uig"
     )
 
 
