@@ -33,6 +33,18 @@ def test_extract_pdf_text_returns_page_spans():
     assert any("Name: Alice" in item["text"] for item in result["pages"][0]["items"])
 
 
+def test_extract_pdf_text_skips_ocr_when_all_pages_have_selectable_text(monkeypatch):
+    def fail_if_called(doc, pages):
+        raise AssertionError("OCR should not run when every page has selectable text")
+
+    monkeypatch.setattr("server.pdf_service.extract_ocr_text", fail_if_called)
+
+    result = extract_pdf_text(make_pdf_with_text("Name: Alice"))
+
+    assert result["ocr_available"] is False
+    assert any("Name: Alice" in item["text"] for item in result["pages"][0]["items"])
+
+
 def test_export_pdf_with_replacements_replaces_selected_text():
     source = make_pdf_with_text("Name: Alice")
     extracted = extract_pdf_text(source)

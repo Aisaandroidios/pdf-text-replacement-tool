@@ -70,7 +70,8 @@ def extract_pdf_text(pdf_bytes: bytes, include_ocr: bool = True) -> dict[str, An
 
     ocr_message = ""
     ocr_available = False
-    if include_ocr:
+    needs_ocr = any(not page["items"] for page in pages)
+    if include_ocr and needs_ocr:
         ocr_result = extract_ocr_text(doc, pages)
         pages = ocr_result.pages
         ocr_available = ocr_result.available

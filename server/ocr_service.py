@@ -48,6 +48,10 @@ def extract_ocr_text(doc: fitz.Document, pages: list[dict[str, Any]]) -> OCRResu
     matrix = fitz.Matrix(scale, scale)
 
     for page_index, page in enumerate(doc):
+        selectable_items = pages[page_index]["items"]
+        if selectable_items:
+            continue
+
         pixmap = page.get_pixmap(matrix=matrix, alpha=False)
         image = Image.open(BytesIO(pixmap.tobytes("png")))
         data = pytesseract.image_to_data(
@@ -57,7 +61,6 @@ def extract_ocr_text(doc: fitz.Document, pages: list[dict[str, Any]]) -> OCRResu
             config="--psm 6",
         )
         ocr_items = ocr_data_to_items(data, page_index, page.rect, scale)
-        selectable_items = pages[page_index]["items"]
         pages[page_index]["items"].extend(
             item for item in ocr_items if not overlaps_existing_text(item, selectable_items)
         )
