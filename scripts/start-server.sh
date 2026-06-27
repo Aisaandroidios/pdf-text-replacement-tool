@@ -33,8 +33,9 @@ if ! launchctl bootstrap "gui/${USER_ID}" "${PLIST_TARGET}"; then
 fi
 launchctl kickstart -k "gui/${USER_ID}/${LABEL}"
 
+echo "正在启动 PDF 信息替换工具..."
 for _ in $(seq 1 20); do
-  if curl -fsS http://127.0.0.1:8000/ >/dev/null; then
+  if curl -fsS http://127.0.0.1:8000/ >/dev/null 2>&1; then
     echo "PDF 信息替换工具已启动: http://127.0.0.1:8000"
     exit 0
   fi
@@ -42,4 +43,5 @@ for _ in $(seq 1 20); do
 done
 
 echo "服务启动失败，请查看 /tmp/pdf_text_replacement_uvicorn.err.log" >&2
+tail -40 /tmp/pdf_text_replacement_uvicorn.err.log >&2 || true
 exit 1
